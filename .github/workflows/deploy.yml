@@ -1,0 +1,106 @@
+name: Infrastructure Deploy
+
+on:
+  push:
+    branches: [main]
+  repository_dispatch:
+    types: [backend-deploy, frontend-deploy]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPO: pet-store-backend
+  CFN_TEMPLATES_BUCKET: pet-store-cfn-templates-058264445873
+  ENVIRONMENT: dev
+  STACK_NAME: dev-pet-store
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve image URI
+        run: |
+          if [ "${{ github.event.client_payload.image_uri }}" != "" ]; then
+            echo "IMAGE_URI=${{ github.event.client_payload.image_uri }}" >> $GITHUB_ENV
+          else
+            ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+            echo "IMAGE_URI=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:latest" >> $GITHUB_ENV
+          fi
+
+      - name: Upload templates to S3
+        run: |
+          aws s3 sync templates/ "s3://$CFN_TEMPLATES_BUCKET/templates/" --delete
+
+      - name: Deploy CloudFormation stack
+        run: |
+          TEMPLATES_URL="https://$CFN_TEMPLATES_BUCKET.s3.$AWS_REGION.amazonaws.com/templates"
+
+          aws cloudformation deploy \
+            --template-file templates/root.yaml \
+            --stack-name $STACK_NAME \
+            --parameter-overrides \
+              EnvironmentName=$ENVIRONMENT \
+              DockerImageUri=$IMAGE_URI \
+              TemplatesBucketUrl=$TEMPLATES_URL \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --no-fail-on-empty-changeset \
+            --tags auto-delete=no auto-stop=no
+
+      - name: Clone and build frontend
+        run: |
+          ALB_DNS=$(aws cloudformation describe-stacks \
+            --stack-name $STACK_NAME \
+            --query "Stacks[0].Outputs[?OutputKey=='ALBDnsName'].OutputValue" \
+            --output text)
+
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          BUCKET_NAME="${ENVIRONMENT}-pet-store-frontend-${ACCOUNT_ID}"
+
+          git clone https://x-access-token:${{ secrets.DISPATCH_TOKEN }}@github.com/bhargaje/pet-store-frontend.git /tmp/frontend
+          cd /tmp/frontend
+
+          echo "VITE_API_BASE_URL=http://$ALB_DNS" > .env.production
+          npm ci
+          npm run build
+
+          aws s3 sync dist/ "s3://$BUCKET_NAME/" --delete
+          rm -rf /tmp/frontend
+
+      - name: Invalidate CloudFront
+        run: |
+          CF_DOMAIN=$(aws cloudformation describe-stacks \
+            --stack-name $STACK_NAME \
+            --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionUrl'].OutputValue" \
+            --output text)
+
+          DIST_ID=$(aws cloudfront list-distributions \
+            --query "DistributionList.Items[?DomainName=='$CF_DOMAIN'].Id" \
+            --output text)
+
+          if [ -n "$DIST_ID" ] && [ "$DIST_ID" != "None" ]; then
+            aws cloudfront create-invalidation --distribution-id $DIST_ID --paths "/*"
+          fi
+
+      - name: Seed database
+        run: |
+          TABLE_NAME=$(aws cloudformation describe-stacks \
+            --stack-name $STACK_NAME \
+            --query "Stacks[0].Outputs[?OutputKey=='PetsTableName'].OutputValue" \
+            --output text)
+
+          git clone https://x-access-token:${{ secrets.DISPATCH_TOKEN }}@github.com/bhargaje/pet-store-backend.git /tmp/backend
+          cd /tmp/backend
+          npm ci --production
+          TABLE_NAME=$TABLE_NAME AWS_REGION=$AWS_REGION node src/seed.js
+          rm -rf /tmp/backend
+
+      - name: Print deployment URLs
+        run: |
+          echo "=== Deployment Complete ==="
+          ALB=$(aws cloudformation describe-stacks --stack-name $STACK_NAME \
+            --query "Stacks[0].Outputs[?OutputKey=='ALBDnsName'].OutputValue" --output text)
+          CF=$(aws cloudformation describe-stacks --stack-name $STACK_NAME \
+            --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionUrl'].OutputValue" --output text)
+          echo "Backend API: http://$ALB/api/pets"
+          echo "Frontend:    https://$CF"
