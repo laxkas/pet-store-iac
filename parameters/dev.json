@@ -1,0 +1,14 @@
+[
+  {
+    "ParameterKey": "EnvironmentName",
+    "ParameterValue": "dev"
+  },
+  {
+    "ParameterKey": "DockerImageUri",
+    "ParameterValue": "REPLACE_WITH_ECR_IMAGE_URI"
+  },
+  {
+    "ParameterKey": "TemplatesBucketUrl",
+    "ParameterValue": "REPLACE_WITH_S3_TEMPLATES_URL"
+  }
+]

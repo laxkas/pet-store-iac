@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: DynamoDB table for Pet Store - stores pet records with on-demand billing
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: dev
+    Description: Environment name used to prefix resource names
+
+Resources:
+  PetsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${EnvironmentName}-Pets
+      AttributeDefinitions:
+        - AttributeName: petId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: petId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-Pets
+        - Key: auto-delete
+          Value: "no"
+        - Key: auto-stop
+          Value: "no"
+
+Outputs:
+  PetsTableName:
+    Description: DynamoDB Pets table name
+    Value: !Ref PetsTable
+    Export:
+      Name: !Sub ${EnvironmentName}-PetsTableName
+  PetsTableArn:
+    Description: DynamoDB Pets table ARN
+    Value: !GetAtt PetsTable.Arn
+    Export:
+      Name: !Sub ${EnvironmentName}-PetsTableArn

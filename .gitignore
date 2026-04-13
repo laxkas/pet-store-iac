@@ -1,0 +1,16 @@
+# Packaged CloudFormation artifacts
+*.zip
+packaged-*.yaml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# Environment-specific overrides
+.env
+.env.*
