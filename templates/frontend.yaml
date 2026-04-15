@@ -48,7 +48,7 @@ Resources:
               OriginAccessIdentity: ''
         DefaultCacheBehavior:
           TargetOriginId: S3Origin
-          ViewerProtocolPolicy: redirect-to-https
+          ViewerProtocolPolicy: allow-all
           AllowedMethods:
             - GET
             - HEAD
