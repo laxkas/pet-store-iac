@@ -57,7 +57,7 @@ jobs:
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           BUCKET_NAME="${ENVIRONMENT}-pet-store-frontend-${ACCOUNT_ID}"
 
-          git clone https://x-access-token:${{ secrets.DISPATCH_TOKEN }}@github.com/bhargaje/pet-store-frontend.git /tmp/frontend
+          git clone https://x-access-token:${{ secrets.DISPATCH_TOKEN }}@github.com/saravnm-aws/pet-store-frontend.git /tmp/frontend
           cd /tmp/frontend
 
           echo "VITE_API_BASE_URL=http://$ALB_DNS" > .env.production
@@ -89,7 +89,7 @@ jobs:
             --query "Stacks[0].Outputs[?OutputKey=='PetsTableName'].OutputValue" \
             --output text)
 
-          git clone https://x-access-token:${{ secrets.DISPATCH_TOKEN }}@github.com/bhargaje/pet-store-backend.git /tmp/backend
+          git clone https://x-access-token:${{ secrets.DISPATCH_TOKEN }}@github.com/saravnm-aws/pet-store-backend.git /tmp/backend
           cd /tmp/backend
           npm ci --production
           TABLE_NAME=$TABLE_NAME AWS_REGION=$AWS_REGION node src/seed.js
