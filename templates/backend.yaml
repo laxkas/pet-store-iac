@@ -95,7 +95,10 @@ Resources:
                   - dynamodb:DeleteItem
                   - dynamodb:Scan
                   - dynamodb:BatchWriteItem
-                Resource: !Ref PetsTableArn
+                  - dynamodb:Query
+                Resource:
+                  - !Ref PetsTableArn
+                  - !Sub '${PetsTableArn}/index/*'
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-pet-store-task-role
