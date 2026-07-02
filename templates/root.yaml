@@ -41,10 +41,12 @@ Resources:
 
   FrontendStack:
     Type: AWS::CloudFormation::Stack
+    DependsOn: BackendStack
     Properties:
       TemplateURL: !Sub ${TemplatesBucketUrl}/frontend.yaml
       Parameters:
         EnvironmentName: !Ref EnvironmentName
+        ALBDnsName: !GetAtt BackendStack.Outputs.ALBDnsName
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-frontend-stack

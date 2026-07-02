@@ -6,6 +6,9 @@ Parameters:
     Type: String
     Default: dev
     Description: Environment name used to prefix resource names
+  ALBDnsName:
+    Type: String
+    Description: DNS name of the backend ALB, added as a CloudFront origin for /api/* so the API is served over HTTPS same-origin.
 
 Resources:
   FrontendBucket:
@@ -46,6 +49,11 @@ Resources:
             OriginAccessControlId: !GetAtt CloudFrontOAC.Id
             S3OriginConfig:
               OriginAccessIdentity: ''
+          - Id: ALBOrigin
+            DomainName: !Ref ALBDnsName
+            CustomOriginConfig:
+              OriginProtocolPolicy: http-only
+              HTTPPort: 80
         DefaultCacheBehavior:
           TargetOriginId: S3Origin
           ViewerProtocolPolicy: allow-all
@@ -57,6 +65,16 @@ Resources:
             - HEAD
           ForwardedValues:
             QueryString: false
+        CacheBehaviors:
+          # Route API calls to the ALB over HTTPS (viewer) -> HTTP (origin), no caching.
+          - PathPattern: /api/*
+            TargetOriginId: ALBOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            # Managed policies: CachingDisabled + AllViewer (forward all headers/query/cookies).
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3
         CustomErrorResponses:
           - ErrorCode: 403
             ResponseCode: 200

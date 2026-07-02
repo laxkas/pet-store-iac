@@ -49,9 +49,9 @@ jobs:
 
       - name: Clone and build frontend
         run: |
-          ALB_DNS=$(aws cloudformation describe-stacks \
+          CF_DOMAIN=$(aws cloudformation describe-stacks \
             --stack-name $STACK_NAME \
-            --query "Stacks[0].Outputs[?OutputKey=='ALBDnsName'].OutputValue" \
+            --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionUrl'].OutputValue" \
             --output text)
 
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
@@ -60,7 +60,8 @@ jobs:
           git clone https://x-access-token:${{ secrets.DISPATCH_TOKEN }}@github.com/saravnm-aws/pet-store-frontend.git /tmp/frontend
           cd /tmp/frontend
 
-          echo "VITE_API_BASE_URL=http://$ALB_DNS" > .env.production
+          # Serve the API same-origin over HTTPS via the CloudFront /api/* behavior.
+          echo "VITE_API_BASE_URL=https://$CF_DOMAIN" > .env.production
           npm ci
           npm run build
 
