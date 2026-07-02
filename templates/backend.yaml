@@ -25,6 +25,21 @@ Parameters:
     Type: String
   PetsTableArn:
     Type: String
+  SplunkHecUrl:
+    Type: String
+    Default: 'https://3.95.251.132:8088/services/collector'
+    Description: Splunk HEC collector URL reachable from the ECS tasks (via NAT egress). Empty disables shipping.
+  SplunkHecToken:
+    Type: String
+    Default: '11111111-1111-1111-1111-111111111111'
+    NoEcho: true
+    Description: Splunk HEC token (demo default; use Secrets Manager for real workloads).
+  SplunkIndex:
+    Type: String
+    Default: main
+  SplunkSourcetype:
+    Type: String
+    Default: pet-store
 
 Resources:
   BackendLogGroup:
@@ -128,6 +143,16 @@ Resources:
           Environment:
             - Name: TABLE_NAME
               Value: !Ref PetsTableName
+            - Name: SERVICE_NAME
+              Value: pet-store-backend
+            - Name: SPLUNK_HEC_URL
+              Value: !Ref SplunkHecUrl
+            - Name: SPLUNK_HEC_TOKEN
+              Value: !Ref SplunkHecToken
+            - Name: SPLUNK_INDEX
+              Value: !Ref SplunkIndex
+            - Name: SPLUNK_SOURCETYPE
+              Value: !Ref SplunkSourcetype
           LogConfiguration:
             LogDriver: awslogs
             Options:
