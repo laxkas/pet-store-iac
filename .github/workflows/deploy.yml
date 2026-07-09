@@ -9,7 +9,7 @@ on:
 env:
   AWS_REGION: us-east-1
   ECR_REPO: pet-store-backend
-  CFN_TEMPLATES_BUCKET: pet-store-cfn-templates-058264445873
+  CFN_TEMPLATES_BUCKET: pet-store-cfn-templates-150809275978
   ENVIRONMENT: dev
   STACK_NAME: dev-pet-store
 
